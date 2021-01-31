@@ -2,6 +2,10 @@ import java.net.*;
 import java.io.*;
 import java.util.*;
 
+/**
+    command line: java Server -document_root /home/ec2-user/files -port 8080
+ */
+
 public class Server {
     public static void main(String[] args) {
         int port = 8080;
@@ -56,7 +60,28 @@ class ClientHandler extends Thread {
 
             // Fetching the content
             String requestTarget = request.getRequestTarget();
-            System.out.println(requestTarget);
+            String requestTargetExtension = request.getRequestTargetExtension();
+
+            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+            out.println("HTTP/1.1 200 OK");
+            switch (requestTargetExtension) {
+                case ".htm":
+                case ".html":
+                    out.println("Content-Type: text/html");
+                    break;
+                case ".txt":
+                    out.println("Content-Type: text/plain");
+                    break;
+                case ".jpg":
+                case ".jpeg":
+                    out.println("Content-Type: image/jpeg");
+                    break;
+                case ".gif":
+                    out.println("Content-Type: image/gif");
+                    break;
+                default:
+            }
+
             StringBuilder contentBuilder = new StringBuilder();
             try {
                 BufferedReader in2 = new BufferedReader(new FileReader(documentRoot + requestTarget));
@@ -68,15 +93,51 @@ class ClientHandler extends Thread {
             } catch (IOException e) {
                 System.out.println(e.getMessage());
             }
-
             String response = contentBuilder.toString();
-            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-            out.println("HTTP/1.1 200 OK");
-            out.println("Content-Type: text/html");
+
             out.println("Content-Length: " + response.length());
             out.println("Date: " + new Date());
             out.println("\r\n");
+            
             out.println(response);
+
+            // else if (requestTargetExtension.equals(".jpeg") || requestTargetExtension.equals(".jpg")) {
+            //     System.out.println("jpg file");
+            //     PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+
+            //     out.println("HTTP/1.1 200 OK");
+            //     switch (requestTargetExtension) {
+            //         case ".htm":
+            //         case ".html":
+            //             out.println("Content-Type: text/html");
+            //             break;
+            //         case ".txt":
+            //             out.println("Content-Type: text/plain");
+            //             break;
+            //         case ".jpg":
+            //         case ".jpeg":
+            //             out.println("Content-Type: image/jpeg");
+            //             break;
+            //         case ".gif":
+            //             out.println("Content-Type: image/gif");
+            //             break;
+            //         default:
+            //     }
+
+                // out.println("Content-Length: " + response.length());
+            //     out.println("Date: " + new Date());
+            //     out.println("\r\n");
+
+            //     BufferedInputStream bis = new BufferedInputStream(new FileInputStream(new File(documentRoot + requestTarget)));
+            //     BufferedOutputStream bos = new BufferedOutputStream(socket.getOutputStream());
+                
+            //     byte[] buffer = new byte[8192];
+            //     int numOfBytes;
+            //     while ((numOfBytes = bis.read(buffer)) != -1) {
+            //         bos.write(buffer, 0, numOfBytes);
+            //     }
+            //     bos.flush();
+            //     bos.close();
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
@@ -98,6 +159,11 @@ class HTTPRequest {
             if (i == 0) {
                 this.requestLine = inputLine;
                 i++;
+            } 
+            else {
+                if (!inputLine.isEmpty()) {
+                    this.headers.put(inputLine.split(":")[0], inputLine.split(":")[1]);
+                }
             }
             request.append(inputLine).append("\r\n");
             if (inputLine.isEmpty()) {
@@ -110,5 +176,9 @@ class HTTPRequest {
     public String getRequestTarget() {
         String target = this.requestLine.split(" ")[1];
         return target.equals("/") ? "/index.html" : target;
+    }
+
+    public String getRequestTargetExtension() {
+        return this.getRequestTarget().substring(this.getRequestTarget().lastIndexOf('.'));
     }
 }
