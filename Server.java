@@ -4,9 +4,8 @@ import java.util.*;
 
 public class Server {
     public static void main(String[] args) {
-
         int port = 8080;
-        String document_root = "";
+        String documentRoot = ".";
 
         // Processing Command Line Arguments (if any)
         if (args.length == 0) {
@@ -15,7 +14,7 @@ public class Server {
             for (int i = 0; i < args.length; i++) {
                 switch (args[i]) {
                     case "-document_root":
-                        document_root=args[i+1];
+                        documentRoot=args[i+1];
                         break;
                     case "-port":
                         port = Integer.parseInt(args[i+1]);
@@ -28,38 +27,50 @@ public class Server {
             System.exit(0);
         }
 
-        try {
-            ServerSocket serverSocket = new ServerSocket(port);
-            Socket clientSocket = serverSocket.accept();
-
-            BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-            PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
-
-            String inputLine, outputLine;
-            StringBuilder request = new StringBuilder();
-            while ((inputLine = in.readLine()) != null) {
-                request.append(inputLine).append("\r\n");
-                System.out.println(inputLine);
-                if (inputLine.isEmpty()) {
-                    break;
-                }
+        boolean listening = true;
+        try (ServerSocket serverSocket = new ServerSocket(port)) {
+            while (listening) {
+                new ClientHandler(serverSocket.accept(), documentRoot).start();
             }
-            System.out.println("request is handled here");
+        } catch (IOException e) {
+            System.err.println("Could not listen on port " + port);
+            System.exit(-1);
+        }
+    }
+}
 
+class ClientHandler extends Thread {
+    private Socket socket = null;
+    private String documentRoot = null;
+
+    public ClientHandler(Socket socket, String documentRoot) {
+        super("ClientHandler");
+        this.socket = socket;
+        this.documentRoot = documentRoot;
+    }
+
+    public void run() {  
+        try {
+            // Parsing the HTTP Request
+            HTTPRequest request = new HTTPRequest(socket);
+
+            // Fetching the content
+            String requestTarget = request.getRequestTarget();
+            System.out.println(requestTarget);
             StringBuilder contentBuilder = new StringBuilder();
             try {
-                BufferedReader in2 = new BufferedReader(new FileReader("SCU_HOME.html"));
+                BufferedReader in2 = new BufferedReader(new FileReader(documentRoot + requestTarget));
                 String s;
                 while ((s = in2.readLine()) != null) {
-                    System.out.println(s);
                     contentBuilder.append(s);
                 }
                 in2.close();
             } catch (IOException e) {
-                System.out.println("error");
+                System.out.println(e.getMessage());
             }
 
             String response = contentBuilder.toString();
+            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
             out.println("HTTP/1.1 200 OK");
             out.println("Content-Type: text/html");
             out.println("Content-Length: " + response.length());
@@ -69,5 +80,35 @@ public class Server {
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
+    }
+}
+
+class HTTPRequest {
+    String requestLine = "";
+    HashMap<String, String> headers = new HashMap<String, String>();
+    String request = "";
+
+    public HTTPRequest(Socket socket) throws Exception {
+        BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+
+        String inputLine;
+        int i = 0;
+        StringBuilder request = new StringBuilder();
+        while ((inputLine = in.readLine()) != null) {
+            if (i == 0) {
+                this.requestLine = inputLine;
+                i++;
+            }
+            request.append(inputLine).append("\r\n");
+            if (inputLine.isEmpty()) {
+                break;
+            }
+        }
+        this.request = request.toString();
+    }
+
+    public String getRequestTarget() {
+        String target = this.requestLine.split(" ")[1];
+        return target.equals("/") ? "/index.html" : target;
     }
 }
