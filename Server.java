@@ -121,6 +121,7 @@ class ClientHandler extends Thread {
                 out.writeBytes("Date: " + new Date() + "\r\n");
                 out.writeBytes("\r\n");
                 out.writeBytes(response + "\r\n");
+                out.close();
             } else if (requestTargetExtension.equals(".jpeg") || requestTargetExtension.equals(".jpg") || requestTargetExtension.equals(".gif")) {
                 DataOutputStream out = new DataOutputStream(socket.getOutputStream());
 
@@ -161,7 +162,7 @@ class ClientHandler extends Thread {
                 out.close();
             }
         } catch (FileNotFoundException e) {
-            System.out.println(e.getMessage());
+            // System.out.println(e.getMessage());
             try {
                 PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
                 out.println("HTTP/1.1 404 Not Found");
@@ -169,11 +170,11 @@ class ClientHandler extends Thread {
                 out.println("Connection: close");
                 out.close();
             } catch (Exception e2) {
-                System.out.println(e.getMessage());
-                System.out.println(e.getCause().getStackTrace());
+                // System.err.println(e.getMessage());
+                // System.err.println(e.getCause().getStackTrace());
             }
         } catch (IsDirectoryException e) {
-            System.out.println(e.getMessage());
+            // System.err.println(e.getMessage());
             try {
                 PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
                 out.println("HTTP/1.1 400 Bad Request, Requested Directory");
@@ -181,11 +182,11 @@ class ClientHandler extends Thread {
                 out.println("Connection: close");
                 out.close();
             } catch (Exception e2) {
-                System.out.println(e.getMessage());
-                System.out.println(e.getCause().getStackTrace());
+                // System.out.println(e.getMessage());
+                // System.out.println(e.getCause().getStackTrace());
             }
         } catch (PermissionsException e) {
-            System.out.println(e.getMessage());
+            // System.out.println(e.getMessage());
             try {
                 PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
                 out.println("HTTP/1.1 403 Forbidden");
@@ -193,12 +194,12 @@ class ClientHandler extends Thread {
                 out.println("Connection: close");
                 out.close();
             } catch (Exception e2) {
-                System.out.println(e.getMessage());
-                System.out.println(e.getCause().getStackTrace());
+                // System.err.println(e.getMessage());
+                // System.err.println(e.getCause().getStackTrace());
             }
         } catch (Exception e) {
-            System.out.println(e.getMessage());
-            System.out.println(e.getCause().getStackTrace());
+            // System.err.println(e.getMessage());
+            // System.err.println(e.getCause().getStackTrace());
         }
     }
 }
